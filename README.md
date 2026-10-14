@@ -35,25 +35,20 @@ This driver replaces the system libfprint with a patched build that:
 | `27c6:55b4` | GF3268, `GF3268_RTSEC_APP_10056` | Void Linux, Lenovo IdeaPad Flex 5 |
 | `27c6:5584` | GF3268 | Not enabled; awaiting confirmation |
 
-## Install
+### Quick: Pre-built Package (Universal / Arch / Debian / Fedora)
 
-### Quick: Pre-built .deb
-
-> **Note:** Release artifacts are automatically built by GitHub Actions and are **not GPG-signed**. For production or security-sensitive environments, consider building from source. SHA256 checksums are provided on the release page for verification.
+Download `goodix-55x4-driver-v1.0.0-x86_64.tar.gz` from [Releases](https://github.com/cururu-rei/goodix-55x4-linux/releases):
 
 ```bash
-# Download the ubuntu-24.04 .deb and SHA256SUMS from the same release first.
-sha256sum -c SHA256SUMS  # verify integrity
-sudo dpkg -i goodix-gf32xx-driver_*.deb
-sudo apt install --fix-broken -y   # pull missing deps if any
+tar -xvf goodix-55x4-driver-v1.0.0-x86_64.tar.gz
+cd goodix-55x4-driver-v1.0.0-x86_64
+sudo ./quick-install.sh
 ```
-
-Download assets from [Releases](https://github.com/GuNanOvO/goodix-55x4-linux/releases). CI builds for Ubuntu 24.04 only. Use source builds on Debian, Arch, or other distributions. The .deb contains the runtime library; it does not replace distribution development headers or GIR files.
 
 ### From Source
 
 ```bash
-git clone https://github.com/GuNanOvO/goodix-55x4-linux.git
+git clone https://github.com/cururu-rei/goodix-55x4-linux.git
 cd goodix-55x4-linux
 sudo ./tools/install.sh
 ```
@@ -99,7 +94,27 @@ sudo pam-auth-update
 # Check "Fingerprint authentication" → OK
 ```
 
-On KDE, the lock screen uses a separate `kde-fingerprint` PAM stack. Keep its `kde` password stack separate to avoid duplicate device claims. Settings in `common-auth` do not automatically control the dedicated fingerprint stack.
+### PAM Setup for KDE Plasma 6 & Lockscreen
+
+On modern KDE Plasma 6 (SDDM / Lockscreen), configure the following PAM files:
+
+- **Lock Screen (`/etc/pam.d/plasmalogin`):**
+  Add at the top of the `auth` section:
+  ```pam
+  auth  sufficient  pam_fprintd.so
+  ```
+  *(Pressing Enter on an empty password prompt triggers fingerprint verification).*
+
+- **GUI Privileges (`/etc/pam.d/polkit-1`):**
+  Add at the top of the `auth` section:
+  ```pam
+  auth  sufficient  pam_fprintd.so
+  ```
+
+- **Sudo (`/etc/pam.d/sudo`):**
+  ```pam
+  auth  sufficient  pam_fprintd.so
+  ```
 
 ## What the Source Installer Installs
 
