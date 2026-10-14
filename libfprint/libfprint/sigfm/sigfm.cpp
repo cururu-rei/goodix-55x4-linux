@@ -59,15 +59,13 @@ struct deserializer<SigfmImgInfo> : public std::true_type {
 } // namespace bin
 
 namespace {
-constexpr auto distance_match = 0.74;
-constexpr auto length_match = 0.05;
-constexpr auto angle_match = 0.05;
-constexpr auto min_match = 12;
+constexpr auto distance_match = 0.82;
+constexpr auto length_match = 0.12;
+constexpr auto angle_match = 0.12;
+constexpr auto min_match = 5;
 bool angles_match(double first, double second)
 {
-    // Equal zero angles and floating-point noise must not produce 0/0.
-    return std::abs(first - second) <= 1e-7 ||
-           1 - std::min(first, second) / std::max(first, second) <= angle_match;
+    return std::abs(first - second) <= angle_match;
 }
 struct match {
     cv::Point2i p1;

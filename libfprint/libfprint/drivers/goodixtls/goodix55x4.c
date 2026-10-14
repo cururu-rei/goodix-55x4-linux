@@ -413,7 +413,8 @@ enum SLEEP_STAGES {
 static void check_none_cmd(FpDevice *dev, guint8 *data, guint16 len,
                            gpointer ssm, GError *err) {
   if (err) {
-    g_print("CHECK NONE FAILED\n");
+    g_print("CHECK NONE FAILED: %s (domain: %s, code: %d)\n",
+            err->message, g_quark_to_string(err->domain), err->code);
     fpi_ssm_mark_failed(ssm, err);
     return;
   }
@@ -975,14 +976,15 @@ static void dev_deactivate(FpImageDevice *img_dev) {
   FpDevice *dev = FP_DEVICE(img_dev);
   FpiDeviceGoodixTls55X4 *self = FPI_DEVICE_GOODIXTLS55X4(dev);
   self->deactivating = TRUE;
-  // The last enrollment image can finish processing before FDT_MODE2 / FDT_UP.
-  // Let that scan drain its replies before completing a normal deactivation.
-  if (self->active && !fpi_device_action_is_cancelled(dev)) {
-    if (!self->scan_ssm)
-      deactivate_idle_complete(dev, NULL, NULL);
-    return;
-  }
+
   if (self->scan_ssm) {
+    int cur_state = fpi_ssm_get_cur_state(self->scan_ssm);
+    // If waiting for finger lift (FDT_MODE2 or FDT_UP) at the end of a scan,
+    // let it complete naturally so scan_complete will call deactivate_idle_complete.
+    if (cur_state > SCAN_STAGE_SWITCH_TO_FDT_DOWN && !fpi_device_action_is_cancelled(dev)) {
+      return;
+    }
+    // Otherwise (waiting for finger touch or cancelled), abort scan_ssm immediately
     goodix_receive_done(dev, NULL, 0,
         g_error_new_literal(G_IO_ERROR, G_IO_ERROR_CANCELLED, "Scan cancelled"));
   }
@@ -1010,11 +1012,11 @@ fpi_device_goodixtls55x4_class_init(FpiDeviceGoodixTls55X4Class *class) {
   dev_class->full_name = "Goodix TLS Fingerprint Sensor 55X4";
   dev_class->type = FP_DEVICE_TYPE_USB;
   dev_class->id_table = id_table;
-  dev_class->nr_enroll_stages = 24;
+  dev_class->nr_enroll_stages = 8;
+  dev_class->temp_hot_seconds = -1;
   dev_class->scan_type = FP_SCAN_TYPE_PRESS;
 
-  // TODO
-  img_dev_class->bz3_threshold = 48;
+  img_dev_class->bz3_threshold = 10;
   img_dev_class->algorithm = FPI_DEVICE_ALGO_SIGFM;
   img_dev_class->img_width = GOODIX55X4_WIDTH;
   img_dev_class->img_height = GOODIX55X4_HEIGHT;

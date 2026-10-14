@@ -270,6 +270,7 @@ FpiMatchResult fpi_print_sigfm_match(FpPrint *template, FpPrint *print,
       return FPI_MATCH_ERROR;
     }
     fp_dbg("sigfm score %d/%d", score, bz3_threshold);
+    g_print("SIGFM MATCH: stage %d, score %d / threshold %d\n", i, score, bz3_threshold);
     if (score >= bz3_threshold)
       return FPI_MATCH_SUCCESS;
   }
